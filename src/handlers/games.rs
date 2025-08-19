@@ -15,11 +15,18 @@ pub struct GameQuery {
     status: Option<String>,
     explicit: Option<String>,
     bad: Option<String>,
-    progress: Option<i32>,
+    #[field(name = "minProgress")]
+    min_progress: Option<i32>,
+    #[field(name = "maxProgress")]
+    max_progress: Option<i32>,
+    #[field(name = "exactProgress")]
+    exact_progress: Option<i32>,
     #[field(name = "minRating")]
     min_rating: Option<i32>,
     #[field(name = "maxRating")]
     max_rating: Option<i32>,
+    #[field(name = "exactRating")]
+    exact_rating: Option<i32>,
     sort: Option<String>,
 }
 
@@ -65,6 +72,14 @@ pub fn get_games(query: GameQuery) -> Result<Json<Vec<Game>>, Status> {
         game_query = game_query.filter(status.eq(status_filter));
     }
 
+    if let Some(bad_filter) = &query.bad {
+        match bad_filter.as_str() {
+            "true" => game_query = game_query.filter(bad.eq(true)),
+            "false" => game_query = game_query.filter(bad.eq(false)),
+            _ => {}
+        }
+    }
+
     if let Some(explicit_filter) = &query.explicit {
         match explicit_filter.as_str() {
             "true" => game_query = game_query.filter(explicit.eq(true)),
@@ -79,6 +94,22 @@ pub fn get_games(query: GameQuery) -> Result<Json<Vec<Game>>, Status> {
 
     if let Some(max_rating_filter) = query.max_rating {
         game_query = game_query.filter(rating.le(max_rating_filter));
+    }
+
+    if let Some(exact_rating_filter) = query.exact_rating {
+        game_query = game_query.filter(rating.eq(exact_rating_filter));
+    }
+
+    if let Some(min_progress_filter) = query.min_progress {
+        game_query = game_query.filter(percent.ge(min_progress_filter));
+    }
+
+    if let Some(max_progress_filter) = query.max_progress {
+        game_query = game_query.filter(percent.le(max_progress_filter));
+    }
+
+    if let Some(exact_progress_filter) = query.exact_progress {
+        game_query = game_query.filter(percent.eq(exact_progress_filter));
     }
 
     if let Some(sort_by) = &query.sort {
