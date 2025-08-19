@@ -1,0 +1,5 @@
+CREATE TABLE wplace (
+  id SERIAL PRIMARY KEY,
+  alt TEXT NOT NULL,
+  coverImage TEXT NOT NULL
+)

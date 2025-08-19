@@ -1,0 +1,286 @@
+use crate::db::connect_db;
+use crate::models::{Book, NewBook, UpdateBook};
+use diesel::prelude::*;
+use rocket::form::FromForm;
+use rocket::serde::{Deserialize, Serialize, json::Json};
+use rocket::{delete, get, http::Status, patch, post, put};
+use std::collections::HashMap;
+
+#[derive(FromForm, Debug)]
+pub struct BookQuery {
+    title: Option<String>,
+    author: Option<String>,
+    genre: Option<String>,
+    tag: Option<String>,
+    status: Option<String>,
+    explicit: Option<String>,
+    #[field(name = "minRating")]
+    min_rating: Option<i32>,
+    #[field(name = "maxRating")]
+    max_rating: Option<i32>,
+    sort: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct BulkDeleteFilter {
+    author: Option<String>,
+    status: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct BulkUpdatePayload {
+    filter: HashMap<String, String>,
+    update: HashMap<String, serde_json::Value>,
+}
+
+#[derive(Serialize)]
+pub struct ApiResponse {
+    message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    deleted: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    updated: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    count: Option<usize>,
+}
+
+#[get("/books?<query..>")]
+pub fn get_books(query: BookQuery) -> Result<Json<Vec<Book>>, Status> {
+    use crate::schema::books::dsl::*;
+
+    let mut conn = connect_db();
+    let mut book_query = books.into_boxed();
+
+    if let Some(title_filter) = &query.title {
+        book_query = book_query.filter(title.ilike(format!("%{}%", title_filter)));
+    }
+
+    if let Some(author_filter) = &query.author {
+        book_query = book_query.filter(author.ilike(format!("%{}%", author_filter)));
+    }
+
+    if let Some(status_filter) = &query.status {
+        book_query = book_query.filter(status.eq(status_filter));
+    }
+
+    if let Some(explicit_filter) = &query.explicit {
+        match explicit_filter.as_str() {
+            "true" => book_query = book_query.filter(explicit.eq(true)),
+            "false" => book_query = book_query.filter(explicit.eq(false)),
+            _ => {}
+        }
+    }
+
+    if let Some(min_rating_filter) = query.min_rating {
+        book_query = book_query.filter(rating.ge(min_rating_filter));
+    }
+
+    if let Some(max_rating_filter) = query.max_rating {
+        book_query = book_query.filter(rating.le(max_rating_filter));
+    }
+
+    if let Some(sort_by) = &query.sort {
+        match sort_by.as_str() {
+            "title" => book_query = book_query.order(title.asc()),
+            "author" => book_query = book_query.order(author.asc()),
+            "rating" => book_query = book_query.order(rating.desc()),
+            _ => {}
+        }
+    }
+
+    let results = book_query
+        .load::<Book>(&mut conn)
+        .map_err(|_| Status::InternalServerError)?;
+
+    let mut filtered_results = results;
+
+    if let Some(genre_filter) = &query.genre {
+        filtered_results.retain(|book| {
+            book.genres.iter().any(|g| {
+                if let Some(genre) = g {
+                    genre.to_lowercase().contains(&genre_filter.to_lowercase())
+                } else {
+                    false
+                }
+            })
+        });
+    }
+
+    if let Some(tag_filter) = &query.tag {
+        filtered_results.retain(|book| {
+            book.tags.iter().any(|t| {
+                if let Some(tag) = t {
+                    tag.to_lowercase().contains(&tag_filter.to_lowercase())
+                } else {
+                    false
+                }
+            })
+        });
+    }
+
+    Ok(Json(filtered_results))
+}
+
+#[get("/books/<book_id>")]
+pub fn get_book_by_id(book_id: String) -> Result<Json<Book>, Status> {
+    use crate::schema::books::dsl::*;
+
+    let mut conn = connect_db();
+
+    let book = books
+        .filter(id.eq(&book_id))
+        .first::<Book>(&mut conn)
+        .map_err(|_| Status::NotFound)?;
+
+    Ok(Json(book))
+}
+
+#[post("/books", format = "json", data = "<new_book>")]
+pub fn post_books(new_book: Json<NewBook>) -> Result<Json<Book>, Status> {
+    use crate::schema::books;
+
+    let mut conn = connect_db();
+
+    let created_book = diesel::insert_into(books::table)
+        .values(&new_book.into_inner())
+        .get_result::<Book>(&mut conn)
+        .map_err(|_| Status::InternalServerError)?;
+
+    Ok(Json(created_book))
+}
+
+#[put("/books/<book_id>", format = "json", data = "<updated_book>")]
+pub fn update_book(book_id: String, updated_book: Json<UpdateBook>) -> Result<Json<Book>, Status> {
+    use crate::schema::books::dsl::*;
+
+    let mut conn = connect_db();
+
+    let book = diesel::update(books.filter(id.eq(&book_id)))
+        .set(&updated_book.into_inner())
+        .get_result::<Book>(&mut conn)
+        .map_err(|_| Status::NotFound)?;
+
+    Ok(Json(book))
+}
+
+#[patch("/books/<book_id>", format = "json", data = "<patch_data>")]
+pub fn patch_book(book_id: String, patch_data: Json<UpdateBook>) -> Result<Json<Book>, Status> {
+    use crate::schema::books::dsl::*;
+
+    let mut conn = connect_db();
+
+    let book = diesel::update(books.filter(id.eq(&book_id)))
+        .set(&patch_data.into_inner())
+        .get_result::<Book>(&mut conn)
+        .map_err(|_| Status::NotFound)?;
+
+    Ok(Json(book))
+}
+
+#[delete("/books/<book_id>")]
+pub fn delete_book(book_id: String) -> Result<Json<ApiResponse>, Status> {
+    use crate::schema::books::dsl::*;
+
+    let mut conn = connect_db();
+
+    let rows_deleted = diesel::delete(books.filter(id.eq(&book_id)))
+        .execute(&mut conn)
+        .map_err(|_| Status::InternalServerError)?;
+
+    if rows_deleted > 0 {
+        Ok(Json(ApiResponse {
+            message: "book deleted".to_string(),
+            deleted: None,
+            updated: None,
+            count: None,
+        }))
+    } else {
+        Err(Status::NotFound)
+    }
+}
+
+#[delete("/books/bulk", format = "json", data = "<filter>")]
+pub fn bulk_delete_books(filter: Json<BulkDeleteFilter>) -> Result<Json<ApiResponse>, Status> {
+    use crate::schema::books::dsl::*;
+
+    let mut conn = connect_db();
+    let filter = filter.into_inner();
+
+    let mut delete_query = diesel::delete(books).into_boxed();
+
+    if let Some(author_filter) = &filter.author {
+        delete_query = delete_query.filter(author.eq(author_filter));
+    }
+
+    if let Some(status_filter) = &filter.status {
+        delete_query = delete_query.filter(status.eq(status_filter));
+    }
+
+    let deleted_count = delete_query
+        .execute(&mut conn)
+        .map_err(|_| Status::InternalServerError)? as i32;
+
+    Ok(Json(ApiResponse {
+        message: "bulk delete complete".to_string(),
+        deleted: Some(deleted_count),
+        updated: None,
+        count: None,
+    }))
+}
+
+#[patch("/books/bulk", format = "json", data = "<payload>")]
+pub fn bulk_update_books(payload: Json<BulkUpdatePayload>) -> Result<Json<ApiResponse>, Status> {
+    use crate::schema::books::dsl::*;
+
+    let mut conn = connect_db();
+    let payload = payload.into_inner();
+
+    let mut update_query = diesel::update(books).into_boxed();
+
+    if let Some(author_filter) = payload.filter.get("author") {
+        update_query = update_query.filter(author.eq(author_filter));
+    }
+
+    if let Some(status_filter) = payload.filter.get("status") {
+        update_query = update_query.filter(status.eq(status_filter));
+    }
+
+    let mut update_book = UpdateBook {
+        title: None,
+        author: None,
+        genres: None,
+        tags: None,
+        rating: None,
+        status: None,
+        description: None,
+        my_thoughts: None,
+        links: None,
+        cover_image: None,
+        explicit: None,
+        color: None,
+    };
+
+    if let Some(new_status) = payload.update.get("status")
+        && let Some(status_str) = new_status.as_str()
+    {
+        update_book.status = Some(status_str.to_string());
+    }
+
+    if let Some(new_rating) = payload.update.get("rating")
+        && let Some(rating_num) = new_rating.as_f64()
+    {
+        update_book.rating = Some(rating_num as i32);
+    }
+
+    let updated_count = update_query
+        .set(&update_book)
+        .execute(&mut conn)
+        .map_err(|_| Status::InternalServerError)? as i32;
+
+    Ok(Json(ApiResponse {
+        message: "bulk update complete".to_string(),
+        deleted: None,
+        updated: Some(updated_count),
+        count: None,
+    }))
+}
