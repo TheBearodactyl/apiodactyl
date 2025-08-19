@@ -1,11 +1,14 @@
-use handlers::{books::*, games::*, projects::*, reviews::*, wplace::*};
-use rocket::{http::Method, launch, routes};
-use rocket_cors::{AllowedOrigins, CorsOptions};
+use {
+    handlers::{admin::*, books::*, games::*, projects::*, reviews::*, wplace::*},
+    rocket::{http::Method, launch},
+    rocket_cors::{AllowedOrigins, CorsOptions},
+};
 
-mod db;
-mod handlers;
-mod models;
-mod schema;
+pub mod auth;
+pub mod db;
+pub mod handlers;
+pub mod models;
+pub mod schema;
 
 #[launch]
 fn rocket() -> _ {
@@ -21,60 +24,10 @@ fn rocket() -> _ {
 
     rocket::build()
         .attach(cors.to_cors().unwrap())
-        .mount(
-            "/wplace",
-            routes![
-                get_screenshot,
-                create_screenshot,
-                update_screenshot,
-                delete_screenshot,
-                patch_screenshot
-            ],
-        )
-        .mount(
-            "/reviews",
-            routes![
-                get_review,
-                create_review,
-                update_review,
-                delete_review,
-                patch_review
-            ],
-        )
-        .mount(
-            "/projects",
-            routes![
-                get_project,
-                create_project,
-                update_project,
-                delete_project,
-                patch_project
-            ],
-        )
-        .mount(
-            "/read-watch",
-            routes![
-                get_books,
-                get_book_by_id,
-                post_books,
-                update_book,
-                patch_book,
-                delete_book,
-                bulk_delete_books,
-                bulk_update_books
-            ],
-        )
-        .mount(
-            "/games",
-            routes![
-                get_games,
-                get_game_by_id,
-                post_games,
-                update_game,
-                patch_game,
-                delete_game,
-                bulk_delete_games,
-                bulk_update_games
-            ],
-        )
+        .mount("/wplace", wplace_routes())
+        .mount("/reviews", reviews_routes())
+        .mount("/projects", projects_routes())
+        .mount("/read-watch", read_watch_routes())
+        .mount("/games", games_routes())
+        .mount("/admin", admin_routes())
 }

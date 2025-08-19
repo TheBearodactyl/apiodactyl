@@ -1,9 +1,10 @@
+use crate::auth::AuthenticatedUser;
 use crate::db::connect_db;
 use crate::models::{Game, NewGame, UpdateGame};
 use diesel::prelude::*;
 use rocket::form::FromForm;
 use rocket::serde::{Deserialize, Serialize, json::Json};
-use rocket::{delete, get, http::Status, patch, post, put};
+use rocket::{delete, get, http::Status, patch, post, put, routes};
 use std::collections::HashMap;
 
 #[derive(FromForm, Debug)]
@@ -169,7 +170,7 @@ pub fn get_game_by_id(game_id: String) -> Result<Json<Game>, Status> {
 }
 
 #[post("/games", format = "json", data = "<new_game>")]
-pub fn post_games(new_game: Json<NewGame>) -> Result<Json<Game>, Status> {
+pub fn post_games(_user: AuthenticatedUser, new_game: Json<NewGame>) -> Result<Json<Game>, Status> {
     use crate::schema::games;
 
     let mut conn = connect_db();
@@ -183,7 +184,11 @@ pub fn post_games(new_game: Json<NewGame>) -> Result<Json<Game>, Status> {
 }
 
 #[put("/games/<game_id>", format = "json", data = "<updated_game>")]
-pub fn update_game(game_id: String, updated_game: Json<UpdateGame>) -> Result<Json<Game>, Status> {
+pub fn update_game(
+    _user: AuthenticatedUser,
+    game_id: String,
+    updated_game: Json<UpdateGame>,
+) -> Result<Json<Game>, Status> {
     use crate::schema::games::dsl::*;
 
     let mut conn = connect_db();
@@ -197,7 +202,11 @@ pub fn update_game(game_id: String, updated_game: Json<UpdateGame>) -> Result<Js
 }
 
 #[patch("/games/<game_id>", format = "json", data = "<patch_data>")]
-pub fn patch_game(game_id: String, patch_data: Json<UpdateGame>) -> Result<Json<Game>, Status> {
+pub fn patch_game(
+    _user: AuthenticatedUser,
+    game_id: String,
+    patch_data: Json<UpdateGame>,
+) -> Result<Json<Game>, Status> {
     use crate::schema::games::dsl::*;
 
     let mut conn = connect_db();
@@ -211,7 +220,7 @@ pub fn patch_game(game_id: String, patch_data: Json<UpdateGame>) -> Result<Json<
 }
 
 #[delete("/games/<game_id>")]
-pub fn delete_game(game_id: String) -> Result<Json<ApiResponse>, Status> {
+pub fn delete_game(_user: AuthenticatedUser, game_id: String) -> Result<Json<ApiResponse>, Status> {
     use crate::schema::games::dsl::*;
 
     let mut conn = connect_db();
@@ -233,7 +242,10 @@ pub fn delete_game(game_id: String) -> Result<Json<ApiResponse>, Status> {
 }
 
 #[delete("/games/bulk", format = "json", data = "<filter>")]
-pub fn bulk_delete_games(filter: Json<BulkDeleteFilter>) -> Result<Json<ApiResponse>, Status> {
+pub fn bulk_delete_games(
+    _user: AuthenticatedUser,
+    filter: Json<BulkDeleteFilter>,
+) -> Result<Json<ApiResponse>, Status> {
     use crate::schema::games::dsl::*;
 
     let mut conn = connect_db();
@@ -262,7 +274,10 @@ pub fn bulk_delete_games(filter: Json<BulkDeleteFilter>) -> Result<Json<ApiRespo
 }
 
 #[patch("/games/bulk", format = "json", data = "<payload>")]
-pub fn bulk_update_games(payload: Json<BulkUpdatePayload>) -> Result<Json<ApiResponse>, Status> {
+pub fn bulk_update_games(
+    _user: AuthenticatedUser,
+    payload: Json<BulkUpdatePayload>,
+) -> Result<Json<ApiResponse>, Status> {
     use crate::schema::games::dsl::*;
 
     let mut conn = connect_db();
@@ -317,4 +332,17 @@ pub fn bulk_update_games(payload: Json<BulkUpdatePayload>) -> Result<Json<ApiRes
         updated: Some(updated_count),
         count: None,
     }))
+}
+
+pub fn games_routes() -> Vec<rocket::Route> {
+    routes![
+        get_games,
+        get_game_by_id,
+        post_games,
+        update_game,
+        patch_game,
+        delete_game,
+        bulk_delete_games,
+        bulk_update_games
+    ]
 }

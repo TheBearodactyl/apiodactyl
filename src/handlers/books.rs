@@ -3,8 +3,10 @@ use crate::models::{Book, NewBook, UpdateBook};
 use diesel::prelude::*;
 use rocket::form::FromForm;
 use rocket::serde::{Deserialize, Serialize, json::Json};
-use rocket::{delete, get, http::Status, patch, post, put};
+use rocket::{delete, get, http::Status, patch, post, put, routes};
 use std::collections::HashMap;
+use crate::auth::AuthenticatedUser;
+use rocket::Route;
 
 #[derive(FromForm, Debug)]
 pub struct BookQuery {
@@ -136,7 +138,7 @@ pub fn get_book_by_id(book_id: String) -> Result<Json<Book>, Status> {
 }
 
 #[post("/books", format = "json", data = "<new_book>")]
-pub fn post_books(new_book: Json<NewBook>) -> Result<Json<Book>, Status> {
+pub fn post_books(_user: AuthenticatedUser, new_book: Json<NewBook>) -> Result<Json<Book>, Status> {
     use crate::schema::books;
 
     let mut conn = connect_db();
@@ -150,7 +152,7 @@ pub fn post_books(new_book: Json<NewBook>) -> Result<Json<Book>, Status> {
 }
 
 #[put("/books/<book_id>", format = "json", data = "<updated_book>")]
-pub fn update_book(book_id: String, updated_book: Json<UpdateBook>) -> Result<Json<Book>, Status> {
+pub fn update_book(_user: AuthenticatedUser, book_id: String, updated_book: Json<UpdateBook>) -> Result<Json<Book>, Status> {
     use crate::schema::books::dsl::*;
 
     let mut conn = connect_db();
@@ -164,7 +166,7 @@ pub fn update_book(book_id: String, updated_book: Json<UpdateBook>) -> Result<Js
 }
 
 #[patch("/books/<book_id>", format = "json", data = "<patch_data>")]
-pub fn patch_book(book_id: String, patch_data: Json<UpdateBook>) -> Result<Json<Book>, Status> {
+pub fn patch_book(_user: AuthenticatedUser, book_id: String, patch_data: Json<UpdateBook>) -> Result<Json<Book>, Status> {
     use crate::schema::books::dsl::*;
 
     let mut conn = connect_db();
@@ -178,7 +180,7 @@ pub fn patch_book(book_id: String, patch_data: Json<UpdateBook>) -> Result<Json<
 }
 
 #[delete("/books/<book_id>")]
-pub fn delete_book(book_id: String) -> Result<Json<ApiResponse>, Status> {
+pub fn delete_book(_user: AuthenticatedUser, book_id: String) -> Result<Json<ApiResponse>, Status> {
     use crate::schema::books::dsl::*;
 
     let mut conn = connect_db();
@@ -200,7 +202,7 @@ pub fn delete_book(book_id: String) -> Result<Json<ApiResponse>, Status> {
 }
 
 #[delete("/books/bulk", format = "json", data = "<filter>")]
-pub fn bulk_delete_books(filter: Json<BulkDeleteFilter>) -> Result<Json<ApiResponse>, Status> {
+pub fn bulk_delete_books(_user: AuthenticatedUser, filter: Json<BulkDeleteFilter>) -> Result<Json<ApiResponse>, Status> {
     use crate::schema::books::dsl::*;
 
     let mut conn = connect_db();
@@ -229,7 +231,7 @@ pub fn bulk_delete_books(filter: Json<BulkDeleteFilter>) -> Result<Json<ApiRespo
 }
 
 #[patch("/books/bulk", format = "json", data = "<payload>")]
-pub fn bulk_update_books(payload: Json<BulkUpdatePayload>) -> Result<Json<ApiResponse>, Status> {
+pub fn bulk_update_books(_user: AuthenticatedUser, payload: Json<BulkUpdatePayload>) -> Result<Json<ApiResponse>, Status> {
     use crate::schema::books::dsl::*;
 
     let mut conn = connect_db();
@@ -283,4 +285,17 @@ pub fn bulk_update_books(payload: Json<BulkUpdatePayload>) -> Result<Json<ApiRes
         updated: Some(updated_count),
         count: None,
     }))
+}
+
+pub fn read_watch_routes() -> Vec<Route> {
+    routes![
+        get_books,
+        get_book_by_id,
+        post_books,
+        update_book,
+        patch_book,
+        delete_book,
+        bulk_delete_books,
+        bulk_update_books
+    ]
 }

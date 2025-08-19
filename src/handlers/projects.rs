@@ -1,12 +1,13 @@
 use crate::db::connect_db;
 use crate::models::{NewProject, Project, UpdateProject};
 use crate::schema::projects;
+use crate::auth::AuthenticatedUser;
 use diesel::prelude::*;
 use rocket::serde::json::Json;
-use rocket::{delete, get, patch, post, put};
+use rocket::{delete, get, patch, post, put, routes};
 
 #[post("/", format = "json", data = "<new_project>")]
-pub fn create_project(new_project: Json<NewProject<'_>>) -> Json<Project> {
+pub fn create_project(_user: AuthenticatedUser, new_project: Json<NewProject<'_>>) -> Json<Project> {
     let mut conn = connect_db();
     let new_project = new_project.into_inner();
     diesel::insert_into(projects::table)
@@ -42,8 +43,17 @@ pub fn get_project(id: i32) -> Option<Json<Project>> {
         .map(Json)
 }
 
+#[get("/")]
+pub fn get_projects() -> Option<Json<Vec<Project>>> {
+    let mut conn = connect_db();
+    projects::table
+        .load::<Project>(&mut conn)
+        .ok()
+        .map(Json)
+}
+
 #[put("/<id>", format = "json", data = "<update_data>")]
-pub fn update_project(id: i32, update_data: Json<UpdateProject>) -> Option<Json<Project>> {
+pub fn update_project(_user: AuthenticatedUser, id: i32, update_data: Json<UpdateProject>) -> Option<Json<Project>> {
     let mut conn = connect_db();
     diesel::update(projects::table.find(id))
         .set(&update_data.into_inner())
@@ -58,7 +68,7 @@ pub fn update_project(id: i32, update_data: Json<UpdateProject>) -> Option<Json<
 }
 
 #[delete("/<id>")]
-pub fn delete_project(id: i32) -> Option<Json<Project>> {
+pub fn delete_project(_user: AuthenticatedUser, id: i32) -> Option<Json<Project>> {
     let mut conn = connect_db();
     let project = projects::table.find(id).first::<Project>(&mut conn).ok()?;
     diesel::delete(projects::table.find(id))
@@ -69,7 +79,7 @@ pub fn delete_project(id: i32) -> Option<Json<Project>> {
 }
 
 #[patch("/<id>", format = "json", data = "<update_data>")]
-pub fn patch_project(id: i32, update_data: Json<UpdateProject>) -> Option<Json<Project>> {
+pub fn patch_project(_user: AuthenticatedUser, id: i32, update_data: Json<UpdateProject>) -> Option<Json<Project>> {
     let mut conn = connect_db();
 
     diesel::update(projects::table.find(id))
@@ -82,4 +92,15 @@ pub fn patch_project(id: i32, update_data: Json<UpdateProject>) -> Option<Json<P
         .first::<Project>(&mut conn)
         .ok()
         .map(Json)
+}
+
+pub fn projects_routes() -> Vec<rocket::Route> {
+    routes![
+        create_project,
+        get_project,
+        get_projects,
+        update_project,
+        delete_project,
+        patch_project,
+    ]
 }

@@ -1,13 +1,14 @@
-use crate::db::connect_db as establish_connection;
+use crate::auth::AuthenticatedUser;
+use crate::db::connect_db;
 use crate::models::{NewReview, Review, UpdateReview};
 use crate::schema::reviews;
 use diesel::prelude::*;
 use rocket::serde::json::Json;
-use rocket::{delete, get, patch, post, put};
+use rocket::{delete, get, patch, post, put, routes};
 
 #[post("/", format = "json", data = "<new_review>")]
-pub fn create_review(new_review: Json<NewReview<'_>>) -> Json<Review> {
-    let mut conn = establish_connection();
+pub fn create_review(_user: AuthenticatedUser, new_review: Json<NewReview<'_>>) -> Json<Review> {
+    let mut conn = connect_db();
     let new_review = new_review.into_inner();
     diesel::insert_into(reviews::table)
         .values(&new_review)
@@ -25,7 +26,7 @@ pub fn create_review(new_review: Json<NewReview<'_>>) -> Json<Review> {
 
 #[get("/<id>")]
 pub fn get_review(id: i32) -> Option<Json<Review>> {
-    let mut conn = establish_connection();
+    let mut conn = connect_db();
     reviews::table
         .find(id)
         .first::<Review>(&mut conn)
@@ -33,9 +34,19 @@ pub fn get_review(id: i32) -> Option<Json<Review>> {
         .map(Json)
 }
 
+#[get("/")]
+pub fn get_reviews() -> Option<Json<Vec<Review>>> {
+    let mut conn = connect_db();
+    reviews::table.load::<Review>(&mut conn).ok().map(Json)
+}
+
 #[put("/<id>", format = "json", data = "<update_data>")]
-pub fn update_review(id: i32, update_data: Json<UpdateReview>) -> Option<Json<Review>> {
-    let mut conn = establish_connection();
+pub fn update_review(
+    _user: AuthenticatedUser,
+    id: i32,
+    update_data: Json<UpdateReview>,
+) -> Option<Json<Review>> {
+    let mut conn = connect_db();
     diesel::update(reviews::table.find(id))
         .set(&update_data.into_inner())
         .execute(&mut conn)
@@ -49,8 +60,8 @@ pub fn update_review(id: i32, update_data: Json<UpdateReview>) -> Option<Json<Re
 }
 
 #[delete("/<id>")]
-pub fn delete_review(id: i32) -> Option<Json<Review>> {
-    let mut conn = establish_connection();
+pub fn delete_review(_user: AuthenticatedUser, id: i32) -> Option<Json<Review>> {
+    let mut conn = connect_db();
     let review = reviews::table.find(id).first::<Review>(&mut conn).ok()?;
     diesel::delete(reviews::table.find(id))
         .execute(&mut conn)
@@ -60,8 +71,12 @@ pub fn delete_review(id: i32) -> Option<Json<Review>> {
 }
 
 #[patch("/<id>", format = "json", data = "<update_data>")]
-pub fn patch_review(id: i32, update_data: Json<UpdateReview>) -> Option<Json<Review>> {
-    let mut conn = establish_connection();
+pub fn patch_review(
+    _user: AuthenticatedUser,
+    id: i32,
+    update_data: Json<UpdateReview>,
+) -> Option<Json<Review>> {
+    let mut conn = connect_db();
 
     diesel::update(reviews::table.find(id))
         .set(&update_data.into_inner())
@@ -73,4 +88,15 @@ pub fn patch_review(id: i32, update_data: Json<UpdateReview>) -> Option<Json<Rev
         .first::<Review>(&mut conn)
         .ok()
         .map(Json)
+}
+
+pub fn reviews_routes() -> Vec<rocket::Route> {
+    routes![
+        create_review,
+        get_review,
+        get_reviews,
+        update_review,
+        delete_review,
+        patch_review
+    ]
 }

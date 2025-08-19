@@ -1,0 +1,7 @@
+CREATE TABLE api_keys (
+    id SERIAL PRIMARY KEY,
+    key_hash VARCHAR NOT NULL UNIQUE,
+    is_admin BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    last_used_at TIMESTAMP
+);

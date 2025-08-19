@@ -1,6 +1,7 @@
 use diesel::{QueryDsl, RunQueryDsl};
-use rocket::{delete, get, patch, post, put, serde::json::Json};
+use rocket::{delete, get, patch, post, put, routes, serde::json::Json};
 
+use crate::auth::AuthenticatedUser;
 use crate::{
     db::connect_db,
     models::{NewWplaceScreenshot, UpdateWplaceScreenshot, WplaceScreenshot},
@@ -8,7 +9,10 @@ use crate::{
 };
 
 #[post("/", format = "json", data = "<new_screenshot>")]
-pub fn create_screenshot(new_screenshot: Json<NewWplaceScreenshot<'_>>) -> Json<WplaceScreenshot> {
+pub fn create_screenshot(
+    _user: AuthenticatedUser,
+    new_screenshot: Json<NewWplaceScreenshot<'_>>,
+) -> Json<WplaceScreenshot> {
     let mut conn = connect_db();
     let new_screenshot = new_screenshot.into_inner();
     diesel::insert_into(wplace::table)
@@ -33,8 +37,18 @@ pub fn get_screenshot(id: i32) -> Option<Json<WplaceScreenshot>> {
         .map(Json)
 }
 
+#[get("/")]
+pub fn get_screenshots() -> Option<Json<Vec<WplaceScreenshot>>> {
+    let mut conn = connect_db();
+    wplace::table
+        .load::<WplaceScreenshot>(&mut conn)
+        .ok()
+        .map(Json)
+}
+
 #[put("/<id>", format = "json", data = "<update_data>")]
 pub fn update_screenshot(
+    _user: AuthenticatedUser,
     id: i32,
     update_data: Json<UpdateWplaceScreenshot>,
 ) -> Option<Json<WplaceScreenshot>> {
@@ -52,7 +66,7 @@ pub fn update_screenshot(
 }
 
 #[delete("/<id>")]
-pub fn delete_screenshot(id: i32) -> Option<Json<WplaceScreenshot>> {
+pub fn delete_screenshot(_user: AuthenticatedUser, id: i32) -> Option<Json<WplaceScreenshot>> {
     let mut conn = connect_db();
     let screenshot = wplace::table
         .find(id)
@@ -68,6 +82,7 @@ pub fn delete_screenshot(id: i32) -> Option<Json<WplaceScreenshot>> {
 
 #[patch("/<id>", format = "json", data = "<update_data>")]
 pub fn patch_screenshot(
+    _user: AuthenticatedUser,
     id: i32,
     update_data: Json<UpdateWplaceScreenshot>,
 ) -> Option<Json<WplaceScreenshot>> {
@@ -83,4 +98,15 @@ pub fn patch_screenshot(
         .first::<WplaceScreenshot>(&mut conn)
         .ok()
         .map(Json)
+}
+
+pub fn wplace_routes() -> Vec<rocket::Route> {
+    routes![
+        create_screenshot,
+        get_screenshot,
+        get_screenshots,
+        update_screenshot,
+        delete_screenshot,
+        patch_screenshot,
+    ]
 }

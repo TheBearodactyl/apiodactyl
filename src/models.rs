@@ -1,5 +1,6 @@
 use {
     crate::schema::*,
+    chrono::NaiveDateTime,
     diesel::{pg::Pg, prelude::*},
     serde::Deserialize,
     serde::Serialize,
@@ -210,4 +211,21 @@ pub struct UpdateGame {
     pub explicit: Option<bool>,
     pub percent: Option<i32>,
     pub bad: Option<bool>,
+}
+
+#[derive(Queryable, Selectable, Serialize, Deserialize)]
+#[diesel(table_name = api_keys)]
+pub struct ApiKey {
+    pub id: i32,
+    pub key_hash: String,
+    pub is_admin: bool,
+    pub created_at: NaiveDateTime,
+    pub last_used_at: Option<NaiveDateTime>,
+}
+
+#[derive(Insertable, Deserialize, Serialize, Debug)]
+#[diesel(table_name = api_keys)]
+pub struct NewApiKey {
+    pub key_hash: String,
+    pub is_admin: bool,
 }

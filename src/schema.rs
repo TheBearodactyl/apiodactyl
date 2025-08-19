@@ -1,6 +1,16 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    api_keys (id) {
+        id -> Int4,
+        key_hash -> Varchar,
+        is_admin -> Bool,
+        created_at -> Timestamp,
+        last_used_at -> Nullable<Timestamp>,
+    }
+}
+
+diesel::table! {
     books (id) {
         id -> Text,
         title -> Text,
@@ -68,6 +78,7 @@ diesel::table! {
 }
 
 diesel::allow_tables_to_appear_in_same_query!(
+    api_keys,
     books,
     games,
     projects,
