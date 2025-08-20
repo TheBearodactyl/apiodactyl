@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: ReggieMyLove<3<3
       POSTGRES_DB: bearodata
       ROCKET_ADDRESS: 0.0.0.0
-      ROCKET_PORT: 8000
+      ROCKET_PORT: 2379
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
@@ -23,9 +23,9 @@ services:
     environment:
       POSTGRES_PASSWORD: ReggieMyLove<3<3
       ROCKET_ADDRESS: 0.0.0.0
-      ROCKET_PORT: 8000
+      ROCKET_PORT: 2379
     ports:
-      - "8000:8000"
+      - "2379:2379"
     volumes:
       - ./migrations:/app/migrations:rw
 
