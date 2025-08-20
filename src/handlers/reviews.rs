@@ -1,11 +1,11 @@
-use crate::auth::AuthenticatedUser;
+use crate::auth::User;
 use crate::db::connect_db;
 use crate::models::{NewReview, Review, UpdateReview};
 use crate::schema::reviews;
 use diesel::prelude::*;
-use rocket::serde::json::Json;
-use rocket::{delete, get, options, patch, post, put, routes, FromForm};
 use rocket::http::Status;
+use rocket::serde::json::Json;
+use rocket::{FromForm, delete, get, options, patch, post, put, routes};
 
 #[derive(FromForm, Debug)]
 pub struct ReviewQuery {
@@ -19,15 +19,19 @@ pub struct ReviewQuery {
 #[options("/")]
 pub fn reviews_opts() -> Json<Vec<(&'static str, &'static str)>> {
     Json(vec![
-	    ("Allow", "POST, GET, PUT, DELETE, PATCH"),
+        ("Allow", "POST, GET, PUT, DELETE, PATCH"),
         ("Content-Type", "application/json"),
         ("Access-Control-Allow-Origin", "*"),
-        ("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, PATCH")
+        (
+            "Access-Control-Allow-Methods",
+            "POST, GET, PUT, DELETE, PATCH",
+        ),
     ])
 }
 
 #[post("/", format = "json", data = "<new_review>")]
-pub fn create_review(_user: AuthenticatedUser, new_review: Json<NewReview<'_>>) -> Json<Review> {
+pub fn create_review(_user: User, new_review: Json<NewReview<'_>>) -> Json<Review> {
+    _user.require_admin().expect("User is not admin");
     let mut conn = connect_db();
     let new_review = new_review.into_inner();
     diesel::insert_into(reviews::table)
@@ -67,7 +71,7 @@ pub fn search_reviews(query: ReviewQuery) -> Result<Json<Vec<Review>>, Status> {
         review_query = review_query.filter(thoughts.ilike(format!("%{}%", thought_filter)));
     }
 
-	if let Some(_) = &query.is_first_chapter {
+    if let Some(_) = &query.is_first_chapter {
         review_query = review_query.filter(chapter.eq(1));
     }
 
@@ -100,10 +104,11 @@ pub fn get_reviews() -> Option<Json<Vec<Review>>> {
 
 #[put("/<id>", format = "json", data = "<update_data>")]
 pub fn update_review(
-    _user: AuthenticatedUser,
+    _user: User,
     id: i32,
     update_data: Json<UpdateReview>,
 ) -> Option<Json<Review>> {
+    _user.require_admin().expect("User is not admin");
     let mut conn = connect_db();
     diesel::update(reviews::table.find(id))
         .set(&update_data.into_inner())
@@ -118,7 +123,8 @@ pub fn update_review(
 }
 
 #[delete("/<id>")]
-pub fn delete_review(_user: AuthenticatedUser, id: i32) -> Option<Json<Review>> {
+pub fn delete_review(_user: User, id: i32) -> Option<Json<Review>> {
+    _user.require_admin().expect("User is not admin");
     let mut conn = connect_db();
     let review = reviews::table.find(id).first::<Review>(&mut conn).ok()?;
     diesel::delete(reviews::table.find(id))
@@ -129,11 +135,8 @@ pub fn delete_review(_user: AuthenticatedUser, id: i32) -> Option<Json<Review>> 
 }
 
 #[patch("/<id>", format = "json", data = "<update_data>")]
-pub fn patch_review(
-    _user: AuthenticatedUser,
-    id: i32,
-    update_data: Json<UpdateReview>,
-) -> Option<Json<Review>> {
+pub fn patch_review(_user: User, id: i32, update_data: Json<UpdateReview>) -> Option<Json<Review>> {
+    _user.require_admin().expect("User is not admin");
     let mut conn = connect_db();
 
     diesel::update(reviews::table.find(id))

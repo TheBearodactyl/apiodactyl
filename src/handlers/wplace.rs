@@ -1,7 +1,7 @@
 use diesel::{QueryDsl, RunQueryDsl};
 use rocket::{delete, get, patch, post, put, routes, serde::json::Json};
 
-use crate::auth::AuthenticatedUser;
+use crate::auth::User;
 use crate::{
     db::connect_db,
     models::{NewWplaceScreenshot, UpdateWplaceScreenshot, WplaceScreenshot},
@@ -10,9 +10,10 @@ use crate::{
 
 #[post("/", format = "json", data = "<new_screenshot>")]
 pub fn create_screenshot(
-    _user: AuthenticatedUser,
+    _user: User,
     new_screenshot: Json<NewWplaceScreenshot<'_>>,
 ) -> Json<WplaceScreenshot> {
+    _user.require_admin().expect("User is not admin");
     let mut conn = connect_db();
     let new_screenshot = new_screenshot.into_inner();
     diesel::insert_into(wplace::table)
@@ -48,10 +49,11 @@ pub fn get_screenshots() -> Option<Json<Vec<WplaceScreenshot>>> {
 
 #[put("/<id>", format = "json", data = "<update_data>")]
 pub fn update_screenshot(
-    _user: AuthenticatedUser,
+    _user: User,
     id: i32,
     update_data: Json<UpdateWplaceScreenshot>,
 ) -> Option<Json<WplaceScreenshot>> {
+    _user.require_admin().expect("User is not admin");
     let mut conn = connect_db();
     diesel::update(wplace::table.find(id))
         .set(&update_data.into_inner())
@@ -66,7 +68,8 @@ pub fn update_screenshot(
 }
 
 #[delete("/<id>")]
-pub fn delete_screenshot(_user: AuthenticatedUser, id: i32) -> Option<Json<WplaceScreenshot>> {
+pub fn delete_screenshot(_user: User, id: i32) -> Option<Json<WplaceScreenshot>> {
+    _user.require_admin().expect("User is not admin");
     let mut conn = connect_db();
     let screenshot = wplace::table
         .find(id)
@@ -82,10 +85,11 @@ pub fn delete_screenshot(_user: AuthenticatedUser, id: i32) -> Option<Json<Wplac
 
 #[patch("/<id>", format = "json", data = "<update_data>")]
 pub fn patch_screenshot(
-    _user: AuthenticatedUser,
+    _user: User,
     id: i32,
     update_data: Json<UpdateWplaceScreenshot>,
 ) -> Option<Json<WplaceScreenshot>> {
+    _user.require_admin().expect("User is not admin");
     let mut conn = connect_db();
 
     diesel::update(wplace::table.find(id))

@@ -1,13 +1,21 @@
-use crate::auth::AuthenticatedUser;
-use crate::db::connect_db;
-use crate::models::{Book, NewBook, UpdateBook};
-use crate::schema::books;
-use diesel::prelude::*;
-use rocket::Route;
-use rocket::form::FromForm;
-use rocket::serde::{Deserialize, Serialize, json::Json};
-use rocket::{delete, get, http::Status, patch, post, put, routes};
-use std::collections::HashMap;
+use {
+    crate::{
+        auth::User,
+        db::connect_db,
+        models::{Book, NewBook, UpdateBook},
+        schema::books,
+    },
+    diesel::prelude::*,
+    rocket::{
+        Route, delete,
+        form::FromForm,
+        get,
+        http::Status,
+        patch, post, put, routes,
+        serde::{Deserialize, Serialize, json::Json},
+    },
+    std::collections::HashMap,
+};
 
 #[derive(FromForm, Debug)]
 pub struct BookQuery {
@@ -131,10 +139,8 @@ pub fn get_book_by_id(book_id: i32) -> Result<Json<Book>, Status> {
 }
 
 #[post("/", format = "json", data = "<new_book>")]
-pub fn post_books(
-    _user: AuthenticatedUser,
-    new_book: Json<NewBook<'_>>,
-) -> Result<Json<Book>, Status> {
+pub fn post_books(_user: User, new_book: Json<NewBook<'_>>) -> Result<Json<Book>, Status> {
+    _user.require_admin().expect("User is not admin");
     let mut conn = connect_db();
     let new_book = new_book.into_inner();
     diesel::insert_into(books::table)
@@ -169,10 +175,11 @@ pub fn post_books(
 
 #[put("/<book_id>", format = "json", data = "<updated_book>")]
 pub fn update_book(
-    _user: AuthenticatedUser,
+    _user: User,
     book_id: i32,
     updated_book: Json<UpdateBook>,
 ) -> Result<Json<Book>, Status> {
+    _user.require_admin().expect("User is not admin");
     use crate::schema::books::dsl::*;
 
     let mut conn = connect_db();
@@ -187,10 +194,11 @@ pub fn update_book(
 
 #[patch("/<book_id>", format = "json", data = "<patch_data>")]
 pub fn patch_book(
-    _user: AuthenticatedUser,
+    _user: User,
     book_id: i32,
     patch_data: Json<UpdateBook>,
 ) -> Result<Json<Book>, Status> {
+    _user.require_admin().expect("User is not admin");
     use crate::schema::books::dsl::*;
 
     let mut conn = connect_db();
@@ -204,7 +212,8 @@ pub fn patch_book(
 }
 
 #[delete("/<book_id>")]
-pub fn delete_book(_user: AuthenticatedUser, book_id: i32) -> Result<Json<ApiResponse>, Status> {
+pub fn delete_book(_user: User, book_id: i32) -> Result<Json<ApiResponse>, Status> {
+    _user.require_admin().expect("User is not admin");
     use crate::schema::books::dsl::*;
 
     let mut conn = connect_db();
@@ -227,9 +236,10 @@ pub fn delete_book(_user: AuthenticatedUser, book_id: i32) -> Result<Json<ApiRes
 
 #[delete("/bulk", format = "json", data = "<filter>")]
 pub fn bulk_delete_books(
-    _user: AuthenticatedUser,
+    _user: User,
     filter: Json<BulkDeleteFilter>,
 ) -> Result<Json<ApiResponse>, Status> {
+    _user.require_admin().expect("User is not admin");
     use crate::schema::books::dsl::*;
 
     let mut conn = connect_db();
@@ -259,9 +269,10 @@ pub fn bulk_delete_books(
 
 #[patch("/bulk", format = "json", data = "<payload>")]
 pub fn bulk_update_books(
-    _user: AuthenticatedUser,
+    _user: User,
     payload: Json<BulkUpdatePayload>,
 ) -> Result<Json<ApiResponse>, Status> {
+    _user.require_admin().expect("User is not admin");
     use crate::schema::books::dsl::*;
 
     let mut conn = connect_db();

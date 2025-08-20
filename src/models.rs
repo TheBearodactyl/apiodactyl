@@ -211,7 +211,7 @@ pub struct UpdateGame {
     pub bad: Option<bool>,
 }
 
-#[derive(Queryable, Selectable, Serialize, Deserialize)]
+#[derive(Queryable, Selectable, Serialize, Deserialize, Debug, Clone)]
 #[diesel(table_name = api_keys)]
 pub struct ApiKey {
     pub id: i32,

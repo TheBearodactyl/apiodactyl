@@ -1,4 +1,4 @@
-use crate::auth::AuthenticatedUser;
+use crate::auth::User;
 use crate::db::connect_db;
 use crate::models::{Game, NewGame, UpdateGame};
 use diesel::prelude::*;
@@ -54,7 +54,7 @@ pub struct ApiResponse {
     count: Option<usize>,
 }
 
-#[get("/games?<query..>")]
+#[get("/search?<query..>")]
 pub fn get_games(query: GameQuery) -> Result<Json<Vec<Game>>, Status> {
     use crate::schema::games::dsl::*;
 
@@ -155,7 +155,7 @@ pub fn get_games(query: GameQuery) -> Result<Json<Vec<Game>>, Status> {
     Ok(Json(filtered_results))
 }
 
-#[get("/games/<game_id>")]
+#[get("/<game_id>")]
 pub fn get_game_by_id(game_id: i32) -> Result<Json<Game>, Status> {
     use crate::schema::games::dsl::*;
 
@@ -169,8 +169,9 @@ pub fn get_game_by_id(game_id: i32) -> Result<Json<Game>, Status> {
     Ok(Json(game))
 }
 
-#[post("/games", format = "json", data = "<new_game>")]
-pub fn post_games(_user: AuthenticatedUser, new_game: Json<NewGame>) -> Result<Json<Game>, Status> {
+#[post("/", format = "json", data = "<new_game>")]
+pub fn post_games(_user: User, new_game: Json<NewGame>) -> Result<Json<Game>, Status> {
+    _user.require_admin().expect("User is not admin");
     use crate::schema::games;
 
     let mut conn = connect_db();
@@ -183,12 +184,13 @@ pub fn post_games(_user: AuthenticatedUser, new_game: Json<NewGame>) -> Result<J
     Ok(Json(created_game))
 }
 
-#[put("/games/<game_id>", format = "json", data = "<updated_game>")]
+#[put("/<game_id>", format = "json", data = "<updated_game>")]
 pub fn update_game(
-    _user: AuthenticatedUser,
+    _user: User,
     game_id: i32,
     updated_game: Json<UpdateGame>,
 ) -> Result<Json<Game>, Status> {
+    _user.require_admin().expect("User is not admin");
     use crate::schema::games::dsl::*;
 
     let mut conn = connect_db();
@@ -201,12 +203,13 @@ pub fn update_game(
     Ok(Json(game))
 }
 
-#[patch("/games/<game_id>", format = "json", data = "<patch_data>")]
+#[patch("/<game_id>", format = "json", data = "<patch_data>")]
 pub fn patch_game(
-    _user: AuthenticatedUser,
+    _user: User,
     game_id: i32,
     patch_data: Json<UpdateGame>,
 ) -> Result<Json<Game>, Status> {
+    _user.require_admin().expect("User is not admin");
     use crate::schema::games::dsl::*;
 
     let mut conn = connect_db();
@@ -219,8 +222,9 @@ pub fn patch_game(
     Ok(Json(game))
 }
 
-#[delete("/games/<game_id>")]
-pub fn delete_game(_user: AuthenticatedUser, game_id: i32) -> Result<Json<ApiResponse>, Status> {
+#[delete("/<game_id>")]
+pub fn delete_game(_user: User, game_id: i32) -> Result<Json<ApiResponse>, Status> {
+    _user.require_admin().expect("User is not admin");
     use crate::schema::games::dsl::*;
 
     let mut conn = connect_db();
@@ -241,11 +245,12 @@ pub fn delete_game(_user: AuthenticatedUser, game_id: i32) -> Result<Json<ApiRes
     }
 }
 
-#[delete("/games/bulk", format = "json", data = "<filter>")]
+#[delete("/bulk", format = "json", data = "<filter>")]
 pub fn bulk_delete_games(
-    _user: AuthenticatedUser,
+    _user: User,
     filter: Json<BulkDeleteFilter>,
 ) -> Result<Json<ApiResponse>, Status> {
+    _user.require_admin().expect("User is not admin");
     use crate::schema::games::dsl::*;
 
     let mut conn = connect_db();
@@ -273,11 +278,12 @@ pub fn bulk_delete_games(
     }))
 }
 
-#[patch("/games/bulk", format = "json", data = "<payload>")]
+#[patch("/bulk", format = "json", data = "<payload>")]
 pub fn bulk_update_games(
-    _user: AuthenticatedUser,
+    _user: User,
     payload: Json<BulkUpdatePayload>,
 ) -> Result<Json<ApiResponse>, Status> {
+    _user.require_admin().expect("User is not admin");
     use crate::schema::games::dsl::*;
 
     let mut conn = connect_db();

@@ -5,6 +5,7 @@ use {
     rocket_cors::{AllowedOrigins, CorsOptions},
 };
 
+pub mod errors;
 pub mod auth;
 pub mod db;
 pub mod handlers;

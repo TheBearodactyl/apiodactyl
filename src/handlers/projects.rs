@@ -1,13 +1,14 @@
 use crate::db::connect_db;
 use crate::models::{NewProject, Project, UpdateProject};
 use crate::schema::projects;
-use crate::auth::AuthenticatedUser;
+use crate::auth::User;
 use diesel::prelude::*;
 use rocket::serde::json::Json;
 use rocket::{delete, get, patch, post, put, routes};
 
 #[post("/", format = "json", data = "<new_project>")]
-pub fn create_project(_user: AuthenticatedUser, new_project: Json<NewProject<'_>>) -> Json<Project> {
+pub fn create_project(_user: User, new_project: Json<NewProject<'_>>) -> Json<Project> {
+    _user.require_admin().expect("User is not admin");
     let mut conn = connect_db();
     let new_project = new_project.into_inner();
     diesel::insert_into(projects::table)
@@ -53,7 +54,8 @@ pub fn get_projects() -> Option<Json<Vec<Project>>> {
 }
 
 #[put("/<id>", format = "json", data = "<update_data>")]
-pub fn update_project(_user: AuthenticatedUser, id: i32, update_data: Json<UpdateProject>) -> Option<Json<Project>> {
+pub fn update_project(_user: User, id: i32, update_data: Json<UpdateProject>) -> Option<Json<Project>> {
+    _user.require_admin().expect("User is not admin");
     let mut conn = connect_db();
     diesel::update(projects::table.find(id))
         .set(&update_data.into_inner())
@@ -68,7 +70,8 @@ pub fn update_project(_user: AuthenticatedUser, id: i32, update_data: Json<Updat
 }
 
 #[delete("/<id>")]
-pub fn delete_project(_user: AuthenticatedUser, id: i32) -> Option<Json<Project>> {
+pub fn delete_project(_user: User, id: i32) -> Option<Json<Project>> {
+    _user.require_admin().expect("User is not admin");
     let mut conn = connect_db();
     let project = projects::table.find(id).first::<Project>(&mut conn).ok()?;
     diesel::delete(projects::table.find(id))
@@ -79,7 +82,8 @@ pub fn delete_project(_user: AuthenticatedUser, id: i32) -> Option<Json<Project>
 }
 
 #[patch("/<id>", format = "json", data = "<update_data>")]
-pub fn patch_project(_user: AuthenticatedUser, id: i32, update_data: Json<UpdateProject>) -> Option<Json<Project>> {
+pub fn patch_project(_user: User, id: i32, update_data: Json<UpdateProject>) -> Option<Json<Project>> {
+    _user.require_admin().expect("User is not admin");
     let mut conn = connect_db();
 
     diesel::update(projects::table.find(id))
