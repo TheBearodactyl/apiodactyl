@@ -1,6 +1,7 @@
 use {
-    handlers::{admin::*, books::*, games::*, projects::*, reviews::*, wplace::*},
-    rocket::{http::Method, launch},
+    handlers::{admin::*, books::*, games::*, projects::*, reviews::*, wplace::*, *},
+    libapiodactyl::handlers::index,
+    rocket::{catchers, http::Method, launch, routes},
     rocket_cors::{AllowedOrigins, CorsOptions},
 };
 
@@ -22,8 +23,12 @@ fn rocket() -> _ {
         )
         .allow_credentials(true);
 
+    let catchers = catchers![catch401, catch404, catch500];
+
     rocket::build()
         .attach(cors.to_cors().unwrap())
+        .register("/", catchers)
+        .mount("/", routes![index])
         .mount("/wplace", wplace_routes())
         .mount("/reviews", reviews_routes())
         .mount("/projects", projects_routes())
