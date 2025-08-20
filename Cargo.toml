@@ -3,14 +3,6 @@ name = "apiodactyl"
 version = "0.1.0"
 edition = "2024"
 
-[[bin]]
-name = "setup_admin"
-path = "src/bin/setup_admin.rs"
-
-[[bin]]
-name = "gen_admin_key"
-path = "src/bin/gen_admin_key.rs"
-
 [lib]
 name = "libapiodactyl"
 path = "src/lib.rs"
@@ -29,3 +21,4 @@ chrono = { version = "0.4.41", features = ["serde"] }
 tokio = { version = "1.47.1", features = ["full"] }
 thiserror = "2.0.16"
 async-trait = "0.1.89"
+clap = "4.5.45"

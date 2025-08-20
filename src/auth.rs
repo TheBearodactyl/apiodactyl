@@ -108,6 +108,7 @@ impl std::ops::Deref for AdminUser {
     }
 }
 
+#[derive(Default)]
 pub struct AuthService {
     cache: ApiKeyCache,
 }
@@ -145,7 +146,7 @@ impl AuthService {
 
     pub async fn update_last_used(&self, key_id: i32) {
         tokio::task::spawn_blocking(move || {
-            if let Ok(mut conn) = std::panic::catch_unwind(|| connect_db()) {
+            if let Ok(mut conn) = std::panic::catch_unwind(connect_db) {
                 let _ = diesel::update(api_keys::table.find(key_id))
                     .set(api_keys::last_used_at.eq(diesel::dsl::now))
                     .execute(&mut conn);
@@ -158,6 +159,36 @@ impl AuthService {
     pub fn generate_api_key() -> String {
         use uuid::Uuid;
         format!("ak_{}", Uuid::new_v4().simple())
+    }
+
+    pub fn ensure_admin_exists(&self) -> Result<(), AuthError> {
+        let mut conn = connect_db();
+
+        let admin_count = api_keys::table
+            .filter(api_keys::is_admin.eq(true))
+            .count()
+            .get_result::<i64>(&mut conn)?;
+
+        if admin_count == 0 {
+            if let Ok(admin_key) = std::env::var("BOOTSTRAP_ADMIN_KEY") {
+                println!("🔧 Creating bootstrap admin key...");
+                match self.create_api_key(&admin_key, true) {
+                    Ok(api_key) => {
+                        println!("✅ Bootstrap admin created with ID: {}", api_key.id);
+                        println!("⚠️  Remove BOOTSTRAP_ADMIN_KEY from environment after startup!");
+                    }
+                    Err(e) => {
+                        eprintln!("❌ Failed to create bootstrap admin: {}", e);
+                        return Err(e);
+                    }
+                }
+            } else {
+                println!("⚠️  No admin users exist and no BOOTSTRAP_ADMIN_KEY provided");
+                println!("   Set BOOTSTRAP_ADMIN_KEY environment variable or use CLI command");
+            }
+        }
+
+        Ok(())
     }
 
     pub fn create_api_key(&self, key: &str, is_admin: bool) -> Result<ApiKey, AuthError> {
