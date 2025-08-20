@@ -4,7 +4,27 @@ use crate::models::{NewReview, Review, UpdateReview};
 use crate::schema::reviews;
 use diesel::prelude::*;
 use rocket::serde::json::Json;
-use rocket::{delete, get, patch, post, put, routes};
+use rocket::{delete, get, options, patch, post, put, routes, FromForm};
+use rocket::http::Status;
+
+#[derive(FromForm, Debug)]
+pub struct ReviewQuery {
+    chapter: Option<i32>,
+    rating: Option<i32>,
+    description: Option<String>,
+    thoughts: Option<String>,
+    is_first_chapter: Option<bool>,
+}
+
+#[options("/")]
+pub fn reviews_opts() -> Json<Vec<(&'static str, &'static str)>> {
+    Json(vec![
+	    ("Allow", "POST, GET, PUT, DELETE, PATCH"),
+        ("Content-Type", "application/json"),
+        ("Access-Control-Allow-Origin", "*"),
+        ("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, PATCH")
+    ])
+}
 
 #[post("/", format = "json", data = "<new_review>")]
 pub fn create_review(_user: AuthenticatedUser, new_review: Json<NewReview<'_>>) -> Json<Review> {
@@ -24,14 +44,52 @@ pub fn create_review(_user: AuthenticatedUser, new_review: Json<NewReview<'_>>) 
     })
 }
 
-#[get("/<id>")]
-pub fn get_review(id: i32) -> Option<Json<Review>> {
+#[get("/search?<query..>")]
+pub fn search_reviews(query: ReviewQuery) -> Result<Json<Vec<Review>>, Status> {
+    use crate::schema::reviews::dsl::*;
+
     let mut conn = connect_db();
-    reviews::table
-        .find(id)
+    let mut review_query = reviews.into_boxed();
+
+    if let Some(chapter_filter) = &query.chapter {
+        review_query = review_query.filter(chapter.eq(chapter_filter));
+    }
+
+    if let Some(rating_filter) = &query.rating {
+        review_query = review_query.filter(rating.eq(rating_filter));
+    }
+
+    if let Some(description_filter) = &query.description {
+        review_query = review_query.filter(description.ilike(format!("%{}%", description_filter)));
+    }
+
+    if let Some(thought_filter) = &query.thoughts {
+        review_query = review_query.filter(thoughts.ilike(format!("%{}%", thought_filter)));
+    }
+
+	if let Some(_) = &query.is_first_chapter {
+        review_query = review_query.filter(chapter.eq(1));
+    }
+
+    let results = review_query
+        .load::<Review>(&mut conn)
+        .map_err(|_| Status::InternalServerError)?;
+
+    let filtered_reviews = results;
+
+    Ok(Json(filtered_reviews))
+}
+
+#[get("/<review_id>")]
+pub fn get_review_by_id(review_id: i32) -> Result<Json<Review>, Status> {
+    use crate::schema::reviews::dsl::*;
+    let mut conn = connect_db();
+    let review = reviews
+        .filter(id.eq(&review_id))
         .first::<Review>(&mut conn)
-        .ok()
-        .map(Json)
+        .map_err(|_| Status::NotFound)?;
+
+    Ok(Json(review))
 }
 
 #[get("/")]
@@ -92,11 +150,13 @@ pub fn patch_review(
 
 pub fn reviews_routes() -> Vec<rocket::Route> {
     routes![
+        reviews_opts,
         create_review,
-        get_review,
+        search_reviews,
         get_reviews,
+        get_review_by_id,
         update_review,
         delete_review,
-        patch_review
+        patch_review,
     ]
 }

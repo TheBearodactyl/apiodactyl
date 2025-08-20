@@ -1,12 +1,13 @@
+use crate::auth::AuthenticatedUser;
 use crate::db::connect_db;
 use crate::models::{Book, NewBook, UpdateBook};
+use crate::schema::books;
 use diesel::prelude::*;
+use rocket::Route;
 use rocket::form::FromForm;
 use rocket::serde::{Deserialize, Serialize, json::Json};
 use rocket::{delete, get, http::Status, patch, post, put, routes};
 use std::collections::HashMap;
-use crate::auth::AuthenticatedUser;
-use rocket::Route;
 
 #[derive(FromForm, Debug)]
 pub struct BookQuery {
@@ -46,7 +47,7 @@ pub struct ApiResponse {
     count: Option<usize>,
 }
 
-#[get("/books?<query..>")]
+#[get("/?<query..>")]
 pub fn get_books(query: BookQuery) -> Result<Json<Vec<Book>>, Status> {
     use crate::schema::books::dsl::*;
 
@@ -123,7 +124,7 @@ pub fn get_books(query: BookQuery) -> Result<Json<Vec<Book>>, Status> {
     Ok(Json(filtered_results))
 }
 
-#[get("/books/<book_id>")]
+#[get("/<book_id>")]
 pub fn get_book_by_id(book_id: String) -> Result<Json<Book>, Status> {
     use crate::schema::books::dsl::*;
 
@@ -137,22 +138,41 @@ pub fn get_book_by_id(book_id: String) -> Result<Json<Book>, Status> {
     Ok(Json(book))
 }
 
-#[post("/books", format = "json", data = "<new_book>")]
-pub fn post_books(_user: AuthenticatedUser, new_book: Json<NewBook>) -> Result<Json<Book>, Status> {
-    use crate::schema::books;
-
+#[post("/", format = "json", data = "<new_book>")]
+pub fn post_books(
+    _user: AuthenticatedUser,
+    new_book: Json<NewBook<'_>>,
+) -> Result<Json<Book>, Status> {
     let mut conn = connect_db();
+    let new_book = new_book.into_inner();
+    diesel::insert_into(books::table)
+        .values(&new_book)
+        .execute(&mut conn)
+        .expect("Error inserting new book");
 
-    let created_book = diesel::insert_into(books::table)
-        .values(&new_book.into_inner())
-        .get_result::<Book>(&mut conn)
-        .map_err(|_| Status::InternalServerError)?;
-
-    Ok(Json(created_book))
+    Ok(Json(Book {
+        id: 0,
+        title: new_book.title.to_string(),
+        author: new_book.author.to_string(),
+        genres: new_book.genres,
+        tags: new_book.tags,
+        rating: new_book.rating,
+        status: new_book.status.to_string(),
+        description: new_book.description.to_string(),
+        my_thoughts: new_book.my_thoughts.to_string(),
+        links: new_book.links,
+        cover_image: new_book.cover_image.to_string(),
+        explicit: new_book.explicit,
+        color: new_book.color.unwrap_or(""),
+    }))
 }
 
-#[put("/books/<book_id>", format = "json", data = "<updated_book>")]
-pub fn update_book(_user: AuthenticatedUser, book_id: String, updated_book: Json<UpdateBook>) -> Result<Json<Book>, Status> {
+#[put("/<book_id>", format = "json", data = "<updated_book>")]
+pub fn update_book(
+    _user: AuthenticatedUser,
+    book_id: String,
+    updated_book: Json<UpdateBook>,
+) -> Result<Json<Book>, Status> {
     use crate::schema::books::dsl::*;
 
     let mut conn = connect_db();
@@ -165,8 +185,12 @@ pub fn update_book(_user: AuthenticatedUser, book_id: String, updated_book: Json
     Ok(Json(book))
 }
 
-#[patch("/books/<book_id>", format = "json", data = "<patch_data>")]
-pub fn patch_book(_user: AuthenticatedUser, book_id: String, patch_data: Json<UpdateBook>) -> Result<Json<Book>, Status> {
+#[patch("/<book_id>", format = "json", data = "<patch_data>")]
+pub fn patch_book(
+    _user: AuthenticatedUser,
+    book_id: String,
+    patch_data: Json<UpdateBook>,
+) -> Result<Json<Book>, Status> {
     use crate::schema::books::dsl::*;
 
     let mut conn = connect_db();
@@ -179,7 +203,7 @@ pub fn patch_book(_user: AuthenticatedUser, book_id: String, patch_data: Json<Up
     Ok(Json(book))
 }
 
-#[delete("/books/<book_id>")]
+#[delete("/<book_id>")]
 pub fn delete_book(_user: AuthenticatedUser, book_id: String) -> Result<Json<ApiResponse>, Status> {
     use crate::schema::books::dsl::*;
 
@@ -201,8 +225,11 @@ pub fn delete_book(_user: AuthenticatedUser, book_id: String) -> Result<Json<Api
     }
 }
 
-#[delete("/books/bulk", format = "json", data = "<filter>")]
-pub fn bulk_delete_books(_user: AuthenticatedUser, filter: Json<BulkDeleteFilter>) -> Result<Json<ApiResponse>, Status> {
+#[delete("/bulk", format = "json", data = "<filter>")]
+pub fn bulk_delete_books(
+    _user: AuthenticatedUser,
+    filter: Json<BulkDeleteFilter>,
+) -> Result<Json<ApiResponse>, Status> {
     use crate::schema::books::dsl::*;
 
     let mut conn = connect_db();
@@ -230,8 +257,11 @@ pub fn bulk_delete_books(_user: AuthenticatedUser, filter: Json<BulkDeleteFilter
     }))
 }
 
-#[patch("/books/bulk", format = "json", data = "<payload>")]
-pub fn bulk_update_books(_user: AuthenticatedUser, payload: Json<BulkUpdatePayload>) -> Result<Json<ApiResponse>, Status> {
+#[patch("/bulk", format = "json", data = "<payload>")]
+pub fn bulk_update_books(
+    _user: AuthenticatedUser,
+    payload: Json<BulkUpdatePayload>,
+) -> Result<Json<ApiResponse>, Status> {
     use crate::schema::books::dsl::*;
 
     let mut conn = connect_db();

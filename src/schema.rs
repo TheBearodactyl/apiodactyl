@@ -12,7 +12,7 @@ diesel::table! {
 
 diesel::table! {
     books (id) {
-        id -> Text,
+        id -> Int4,
         title -> Text,
         author -> Text,
         genres -> Array<Nullable<Text>>,

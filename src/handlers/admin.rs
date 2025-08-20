@@ -1,6 +1,6 @@
-use crate::auth::AdminUser;
+use crate::auth::{AdminUser, AuthenticatedUser};
 use rocket::serde::json::Json;
-use rocket::{post, routes};
+use rocket::{get, post, routes};
 
 #[post("/create-key")]
 pub fn create_api_key(_admin: AdminUser) -> Json<serde_json::Value> {
@@ -19,6 +19,11 @@ pub fn create_api_key(_admin: AdminUser) -> Json<serde_json::Value> {
     }
 }
 
+#[get("/is-admin")]
+pub fn is_admin(user: AuthenticatedUser) -> Json<bool> {
+    Json(user.is_admin())
+}
+
 pub fn admin_routes() -> Vec<rocket::Route> {
-    routes![create_api_key]
+    routes![create_api_key, is_admin]
 }

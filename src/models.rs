@@ -102,7 +102,7 @@ pub struct UpdateProject {
 #[diesel(table_name = books)]
 #[diesel(check_for_backend(Pg))]
 pub struct Book {
-    pub id: String,
+    pub id: i32,
     pub title: String,
     pub author: String,
     pub genres: Vec<Option<String>>,
@@ -121,7 +121,6 @@ pub struct Book {
 #[diesel(table_name = books)]
 #[diesel(check_for_backend(Pg))]
 pub struct NewBook<'a> {
-    pub id: &'a str,
     pub title: &'a str,
     pub author: &'a str,
     pub genres: Vec<&'a str>,
@@ -178,7 +177,6 @@ pub struct Game {
 #[diesel(table_name = games)]
 #[diesel(check_for_backend(Pg))]
 pub struct NewGame<'a> {
-    pub id: &'a str,
     pub title: &'a str,
     pub developer: &'a str,
     pub genres: Vec<&'a str>,
