@@ -1,5 +1,5 @@
 CREATE TABLE games (
-    id TEXT PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     title TEXT NOT NULL,
     developer TEXT NOT NULL,
     genres TEXT[] NOT NULL CHECK (array_position(genres, null) IS NULL),
