@@ -125,7 +125,7 @@ pub fn get_books(query: BookQuery) -> Result<Json<Vec<Book>>, Status> {
 }
 
 #[get("/<book_id>")]
-pub fn get_book_by_id(book_id: String) -> Result<Json<Book>, Status> {
+pub fn get_book_by_id(book_id: i32) -> Result<Json<Book>, Status> {
     use crate::schema::books::dsl::*;
 
     let mut conn = connect_db();
@@ -154,8 +154,16 @@ pub fn post_books(
         id: 0,
         title: new_book.title.to_string(),
         author: new_book.author.to_string(),
-        genres: new_book.genres,
-        tags: new_book.tags,
+        genres: new_book
+            .genres
+            .iter()
+            .map(|a| Some(a.to_string()))
+            .collect::<Vec<Option<String>>>(),
+        tags: new_book
+            .tags
+            .iter()
+            .map(|a| Some(a.to_string()))
+            .collect::<Vec<Option<String>>>(),
         rating: new_book.rating,
         status: new_book.status.to_string(),
         description: new_book.description.to_string(),
@@ -163,14 +171,14 @@ pub fn post_books(
         links: new_book.links,
         cover_image: new_book.cover_image.to_string(),
         explicit: new_book.explicit,
-        color: new_book.color.unwrap_or(""),
+        color: Some(new_book.color.unwrap().to_string()),
     }))
 }
 
 #[put("/<book_id>", format = "json", data = "<updated_book>")]
 pub fn update_book(
     _user: AuthenticatedUser,
-    book_id: String,
+    book_id: i32,
     updated_book: Json<UpdateBook>,
 ) -> Result<Json<Book>, Status> {
     use crate::schema::books::dsl::*;
@@ -188,7 +196,7 @@ pub fn update_book(
 #[patch("/<book_id>", format = "json", data = "<patch_data>")]
 pub fn patch_book(
     _user: AuthenticatedUser,
-    book_id: String,
+    book_id: i32,
     patch_data: Json<UpdateBook>,
 ) -> Result<Json<Book>, Status> {
     use crate::schema::books::dsl::*;
@@ -204,7 +212,7 @@ pub fn patch_book(
 }
 
 #[delete("/<book_id>")]
-pub fn delete_book(_user: AuthenticatedUser, book_id: String) -> Result<Json<ApiResponse>, Status> {
+pub fn delete_book(_user: AuthenticatedUser, book_id: i32) -> Result<Json<ApiResponse>, Status> {
     use crate::schema::books::dsl::*;
 
     let mut conn = connect_db();
