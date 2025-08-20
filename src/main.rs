@@ -1,6 +1,6 @@
 use {
     handlers::{admin::*, books::*, games::*, projects::*, reviews::*, wplace::*, *},
-    libapiodactyl::handlers::index,
+    libapiodactyl::{auth::AuthService, handlers::index},
     rocket::{catchers, http::Method, launch, routes},
     rocket_cors::{AllowedOrigins, CorsOptions},
 };
@@ -27,6 +27,7 @@ fn rocket() -> _ {
     let catchers = catchers![catch401, catch404, catch500];
 
     rocket::build()
+        .manage(AuthService::new())
         .attach(cors.to_cors().unwrap())
         .register("/", catchers)
         .mount("/", routes![index])
