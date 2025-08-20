@@ -30,7 +30,7 @@ diesel::table! {
 
 diesel::table! {
     games (id) {
-        id -> Text,
+        id -> Int4,
         title -> Text,
         developer -> Text,
         genres -> Array<Nullable<Text>>,

@@ -156,7 +156,7 @@ pub fn get_games(query: GameQuery) -> Result<Json<Vec<Game>>, Status> {
 }
 
 #[get("/games/<game_id>")]
-pub fn get_game_by_id(game_id: String) -> Result<Json<Game>, Status> {
+pub fn get_game_by_id(game_id: i32) -> Result<Json<Game>, Status> {
     use crate::schema::games::dsl::*;
 
     let mut conn = connect_db();
@@ -186,7 +186,7 @@ pub fn post_games(_user: AuthenticatedUser, new_game: Json<NewGame>) -> Result<J
 #[put("/games/<game_id>", format = "json", data = "<updated_game>")]
 pub fn update_game(
     _user: AuthenticatedUser,
-    game_id: String,
+    game_id: i32,
     updated_game: Json<UpdateGame>,
 ) -> Result<Json<Game>, Status> {
     use crate::schema::games::dsl::*;
@@ -204,7 +204,7 @@ pub fn update_game(
 #[patch("/games/<game_id>", format = "json", data = "<patch_data>")]
 pub fn patch_game(
     _user: AuthenticatedUser,
-    game_id: String,
+    game_id: i32,
     patch_data: Json<UpdateGame>,
 ) -> Result<Json<Game>, Status> {
     use crate::schema::games::dsl::*;
@@ -220,7 +220,7 @@ pub fn patch_game(
 }
 
 #[delete("/games/<game_id>")]
-pub fn delete_game(_user: AuthenticatedUser, game_id: String) -> Result<Json<ApiResponse>, Status> {
+pub fn delete_game(_user: AuthenticatedUser, game_id: i32) -> Result<Json<ApiResponse>, Status> {
     use crate::schema::games::dsl::*;
 
     let mut conn = connect_db();
