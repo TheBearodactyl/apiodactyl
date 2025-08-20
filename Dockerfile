@@ -40,8 +40,6 @@ RUN chmod +x /usr/bin/diesel
 WORKDIR /app
 
 COPY --from=builder /app/target/debug/apiodactyl .
-COPY --from=builder /app/target/debug/gen_admin_key .
-COPY --from=builder /app/target/debug/setup_admin .
 
 COPY migrations ./migrations
 COPY docker-entrypoint.sh .
