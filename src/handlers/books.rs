@@ -107,17 +107,25 @@ pub fn get_books(query: BookQuery) -> Result<Json<Vec<Book>>, Status> {
 
     if let Some(genre_filter) = &query.genre {
         filtered_results.retain(|book| {
-            book.genres
-                .iter()
-                .any(|g| g.to_lowercase().contains(&genre_filter.to_lowercase()))
+            book.genres.iter().any(|g| {
+                if let Some(genre) = g {
+                    genre.to_lowercase().contains(&genre_filter.to_lowercase())
+                } else {
+                    false
+                }
+            })
         });
     }
 
     if let Some(tag_filter) = &query.tag {
         filtered_results.retain(|book| {
-            book.tags
-                .iter()
-                .any(|t| t.to_lowercase().contains(&tag_filter.to_lowercase()))
+            book.tags.iter().any(|t| {
+                if let Some(tag) = t {
+                    tag.to_lowercase().contains(&tag_filter.to_lowercase())
+                } else {
+                    false
+                }
+            })
         });
     }
 
@@ -155,13 +163,13 @@ pub fn post_books(_user: User, new_book: Json<NewBook<'_>>) -> Result<Json<Book>
         genres: new_book
             .genres
             .iter()
-            .map(|a| a.to_string())
-            .collect::<Vec<String>>(),
+            .map(|a| Some(a.to_string()))
+            .collect::<Vec<Option<String>>>(),
         tags: new_book
             .tags
             .iter()
-            .map(|a| a.to_string())
-            .collect::<Vec<String>>(),
+            .map(|a| Some(a.to_string()))
+            .collect::<Vec<Option<String>>>(),
         rating: new_book.rating,
         status: new_book.status.to_string(),
         description: new_book.description.to_string(),

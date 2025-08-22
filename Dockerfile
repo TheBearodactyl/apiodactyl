@@ -41,8 +41,8 @@ WORKDIR /app
 
 COPY --from=builder /app/target/debug/apiodactyl .
 
-COPY migrations ./migrations
-COPY docker-entrypoint.sh .
+COPY deployment/migrations ./migrations
+COPY deployment/docker-entrypoint.sh .
 
 RUN chmod +x docker-entrypoint.sh
 
