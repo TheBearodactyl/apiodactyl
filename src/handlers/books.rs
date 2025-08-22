@@ -55,7 +55,7 @@ pub struct ApiResponse {
     count: Option<usize>,
 }
 
-#[get("/?<query..>")]
+#[get("/search?<query..>")]
 pub fn get_books(query: BookQuery) -> Result<Json<Vec<Book>>, Status> {
     use crate::schema::books::dsl::*;
 
