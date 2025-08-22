@@ -103,6 +103,7 @@ dependencies = [
  "hex",
  "rocket",
  "rocket_cors",
+ "rocket_db_pools",
  "serde",
  "serde_json",
  "sha2",
@@ -1475,6 +1476,27 @@ dependencies = [
  "unicase",
  "unicase_serde",
  "url",
+]
+
+[[package]]
+name = "rocket_db_pools"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6578b2740ceee3e78bff63fe9299d964b7e68318446cdcb9af3b9cab46e1e9d"
+dependencies = [
+ "rocket",
+ "rocket_db_pools_codegen",
+ "version_check",
+]
+
+[[package]]
+name = "rocket_db_pools_codegen"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "842e859f2e87a23efc0f81e25756c0fb43f18726e62daf99da7ea19fbc56cebd"
+dependencies = [
+ "devise",
+ "quote",
 ]
 
 [[package]]
