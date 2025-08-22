@@ -21,7 +21,7 @@ diesel::table! {
         status -> Text,
         description -> Text,
         my_thoughts -> Text,
-        links -> Nullable<Jsonb>,
+        links -> Nullable<Array<Nullable<Jsonb>>>,
         cover_image -> Text,
         explicit -> Bool,
         color -> Nullable<Text>,

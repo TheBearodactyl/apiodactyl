@@ -8,7 +8,7 @@ CREATE TABLE books (
     status TEXT NOT NULL,
     description TEXT NOT NULL,
     my_thoughts TEXT NOT NULL,
-    links JSONB,
+    links JSONB[],
     cover_image TEXT NOT NULL,
     explicit BOOLEAN NOT NULL,
     color TEXT

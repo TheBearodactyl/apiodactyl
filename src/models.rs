@@ -111,7 +111,7 @@ pub struct Book {
     pub status: String,
     pub description: String,
     pub my_thoughts: String,
-    pub links: Option<serde_json::Value>,
+    pub links: Option<Vec<Option<serde_json::Value>>>,
     pub cover_image: String,
     pub explicit: bool,
     pub color: Option<String>,
@@ -120,19 +120,19 @@ pub struct Book {
 #[derive(Insertable, Deserialize, Serialize, Debug)]
 #[diesel(table_name = books)]
 #[diesel(check_for_backend(Pg))]
-pub struct NewBook<'a> {
-    pub title: &'a str,
-    pub author: &'a str,
-    pub genres: Vec<&'a str>,
-    pub tags: Vec<&'a str>,
+pub struct NewBook {
+    pub title: String,
+    pub author: String,
+    pub genres: Vec<String>,
+    pub tags: Vec<String>,
     pub rating: i32,
-    pub status: &'a str,
-    pub description: &'a str,
-    pub my_thoughts: &'a str,
-    pub links: Option<serde_json::Value>,
-    pub cover_image: &'a str,
+    pub status: String,
+    pub description: String,
+    pub my_thoughts: String,
+    pub links: Option<Vec<Option<serde_json::Value>>>,
+    pub cover_image: String,
     pub explicit: bool,
-    pub color: Option<&'a str>,
+    pub color: Option<String>,
 }
 
 #[derive(Deserialize, AsChangeset, Serialize, Debug)]
@@ -147,7 +147,7 @@ pub struct UpdateBook {
     pub status: Option<String>,
     pub description: Option<String>,
     pub my_thoughts: Option<String>,
-    pub links: Option<serde_json::Value>,
+    pub links: Option<Vec<Option<serde_json::Value>>>,
     pub cover_image: Option<String>,
     pub explicit: Option<bool>,
     pub color: Option<String>,

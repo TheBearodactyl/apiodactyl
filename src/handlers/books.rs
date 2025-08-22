@@ -147,38 +147,17 @@ pub fn get_book_by_id(book_id: i32) -> Result<Json<Book>, Status> {
 }
 
 #[post("/", format = "json", data = "<new_book>")]
-pub fn post_books(_user: User, new_book: Json<NewBook<'_>>) -> Result<Json<Book>, Status> {
+pub fn post_books(_user: User, new_book: Json<NewBook>) -> Result<Json<Book>, Status> {
     _user.require_admin().expect("User is not admin");
     let mut conn = connect_db();
     let new_book = new_book.into_inner();
-    diesel::insert_into(books::table)
-        .values(&new_book)
-        .execute(&mut conn)
-        .expect("Error inserting new book");
 
-    Ok(Json(Book {
-        id: 0,
-        title: new_book.title.to_string(),
-        author: new_book.author.to_string(),
-        genres: new_book
-            .genres
-            .iter()
-            .map(|a| Some(a.to_string()))
-            .collect::<Vec<Option<String>>>(),
-        tags: new_book
-            .tags
-            .iter()
-            .map(|a| Some(a.to_string()))
-            .collect::<Vec<Option<String>>>(),
-        rating: new_book.rating,
-        status: new_book.status.to_string(),
-        description: new_book.description.to_string(),
-        my_thoughts: new_book.my_thoughts.to_string(),
-        links: new_book.links,
-        cover_image: new_book.cover_image.to_string(),
-        explicit: new_book.explicit,
-        color: Some(new_book.color.unwrap().to_string()),
-    }))
+    let inserted_book = diesel::insert_into(books::table)
+        .values(&new_book)
+        .get_result::<Book>(&mut conn)
+        .map_err(|_| Status::InternalServerError)?;
+
+    Ok(Json(inserted_book))
 }
 
 #[put("/<book_id>", format = "json", data = "<updated_book>")]
