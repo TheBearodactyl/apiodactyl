@@ -6,6 +6,7 @@ use {
         schema::books,
     },
     diesel::prelude::*,
+    nucleo::{Config, Nucleo},
     rocket::{
         Route, delete,
         form::FromForm,
